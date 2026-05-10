@@ -34,7 +34,7 @@ fi
 PKG="$1"
 ARCH="$2"
 
-UNPACK_DIR="${DOWNLOAD_DIR}/${ARCH}"
+UNPACK_DIR="${DOWNLOAD_DIR}/unpack/${ARCH}"
 PKG_DIR="${DOWNLOAD_DIR}/pkg/${ARCH}"
 
 if [ "$CLEAN" -eq 1 ]; then
