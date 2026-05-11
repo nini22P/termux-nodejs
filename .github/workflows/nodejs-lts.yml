@@ -1,0 +1,97 @@
+name: nodejs-lts
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+env:
+  PKG_NAME: "nodejs-lts"
+  OUT_PREFIX: "nodejs"
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set_output.outputs.VERSION }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(sh check-version.sh ${{ env.PKG_NAME }} aarch64)
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check tag
+        uses: mukunku/tag-exists-action@v1.7.0
+        id: check
+        with:
+          tag: v${{ steps.version.outputs.VERSION }}
+
+      - name: Set output
+        id: set_output
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          echo "New version: ${{ steps.version.outputs.VERSION }}"
+          echo "VERSION=${{ steps.version.outputs.VERSION }}" >> $GITHUB_OUTPUT
+
+      - name: No update
+        if: steps.check.outputs.exists == 'true'
+        run: exit 0
+
+  download:
+    needs: check
+    if: needs.check.outputs.version != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download packages
+        run: |
+          for arch in aarch64 arm x86_64 i686; do
+            sh termux-package-downloader.sh ${{ env.PKG_NAME }} $arch
+          done
+
+      - name: Create packages
+        run: |
+          mkdir -p artifacts
+          for arch in aarch64 arm x86_64 i686; do
+            tar -cJf "artifacts/${{ env.OUT_PREFIX }}-$arch.tar.xz" -C "download/unpack/$arch" .
+          done
+
+      - name: SHA256
+        run: |
+          cd artifacts
+          sha256sum * > sha256.txt
+
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifacts
+          path: artifacts/*
+
+  release:
+    needs: [check, download]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: artifacts
+          path: artifacts
+
+      - name: Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: v${{ needs.check.outputs.version }}
+          body: ""
+          generate_release_notes: false
+          draft: false
+          files: |
+            artifacts/*
