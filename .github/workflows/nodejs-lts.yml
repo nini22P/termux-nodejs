@@ -90,7 +90,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.check.outputs.version }}
-          body: ""
+          body: " "
           generate_release_notes: false
           draft: false
           files: |
