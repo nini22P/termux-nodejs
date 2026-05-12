@@ -90,8 +90,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.check.outputs.version }}
-          body: " "
-          generate_release_notes: false
+          body: "See changes: https://github.com/termux/termux-packages/commits/master/packages/nodejs-lts"
           draft: false
           files: |
             artifacts/*
